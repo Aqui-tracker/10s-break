@@ -119,7 +119,7 @@ function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
 function formatDate(d){return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 function getWeekStart(){return getMostRecentWednesday(new Date());}
 function getPrevWeekStart(){return addDays(getWeekStart(),-7);}
-function todayStr(){return dateToStr(new Date());}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 let employees={Kitchen:[],Bar:[],Retail:[]},timers={},pendingFiles={Kitchen:[],Bar:[],Retail:[]},modalCallback=null,summaryViewWeek='current',summarySelectedDay=null,cachedPin='1234',summaryRenderSeq=0;
 async function loadPin(){const d=await SB.get('settings?location=eq.'+LOCATION);if(d&&d[0])cachedPin=d[0].pin;}
 function getPin(){return cachedPin;}
