@@ -126,6 +126,7 @@
   .tap-dept{font-size:0.7rem;color:var(--muted);margin-top:4px;}
   .tap-status{font-size:0.8rem;font-weight:600;margin-top:10px;color:var(--muted);}
   .emp-tap-btn.on-break .tap-status{color:var(--green);}
+  .tap-return{font-size:0.82rem;font-weight:700;margin-top:6px;color:var(--accent);}
   .pin-modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:320px;text-align:center;}
   .pin-modal h3{font-size:1rem;margin-bottom:6px;}
   .pin-modal p{font-size:0.78rem;color:var(--muted);margin-bottom:16px;}
@@ -466,7 +467,8 @@ function renderEmployeeGrid() {
     btn.className='emp-tap-btn'+(running?' on-break':'');
     btn.id='etap-'+emp.id;
     const icon=emp.cat==='Kitchen'?'🍳':emp.cat==='Bar'?'🍹':'🛍';
-    btn.innerHTML=`<div class="tap-name">${emp.name}</div><div class="tap-dept">${icon} ${emp.cat}</div><div class="tap-status">${running?'● On Break — Tap to end':'Tap to start break'}</div>`;
+    const returnLine=running?`<div class="tap-return">Return by ${new Date(timers[emp.id].start+600000).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true})}</div>`:'';
+    btn.innerHTML=`<div class="tap-name">${emp.name}</div><div class="tap-dept">${icon} ${emp.cat}</div><div class="tap-status">${running?'● On Break — Tap to end':'Tap to start break'}</div>${returnLine}`;
     btn.onclick=()=>toggleEmpBreak(emp.id,emp.cat);
     grid.appendChild(btn);
   });
