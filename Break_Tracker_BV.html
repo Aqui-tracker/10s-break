@@ -97,6 +97,7 @@
   .summary-table tr:last-child td{border-bottom:none;}
   .status-ok{color:var(--green);font-weight:700;}
   .status-over{color:var(--red);font-weight:700;}
+  .status-review{color:var(--yellow);font-weight:700;}
   .cat-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:600;}
   .cat-kitchen{background:rgba(234,179,8,.15);color:var(--yellow);}
   .cat-bar{background:rgba(79,142,247,.15);color:var(--accent);}
@@ -110,6 +111,8 @@
   .audio-unlock-bar.hidden{display:none;}
   .emp-mode-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--muted);font-size:0.8rem;font-weight:600;cursor:pointer;white-space:nowrap;}
   .emp-mode-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .admin-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--muted);font-size:0.8rem;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .admin-btn:hover{border-color:var(--yellow);color:var(--yellow);}
   .emp-mode-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column;}
   .emp-mode-overlay.active{display:flex;}
   .emp-mode-header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;}
@@ -201,6 +204,7 @@
     <div class="header-sub" id="todayLabel">Loading...</div>
   </div>
   <div class="header-right">
+    <button class="admin-btn" onclick="showPinModal('admin')">🏠 Admin</button>
     <button class="emp-mode-btn" onclick="showPinModal('enter')">👤 Employee Mode</button>
     <div class="date-badge" id="clockDisplay">--:--:--</div>
   </div>
@@ -406,8 +410,8 @@ async function savePin(p) {
 let pinBuffer=''; let pinAction='exit'; let changePinStep=1; let changePinFirst='';
 function showPinModal(action) {
   pinAction=action; pinBuffer=''; changePinStep=1; changePinFirst='';
-  document.getElementById('pinModalTitle').textContent=action==='enter'?'Enter Employee Mode':'Manager Access';
-  document.getElementById('pinModalSub').textContent=action==='enter'?'PIN required to lock into Employee Mode':'Enter your 4-digit PIN';
+  document.getElementById('pinModalTitle').textContent=action==='enter'?'Enter Employee Mode':action==='admin'?'Admin Access':'Manager Access';
+  document.getElementById('pinModalSub').textContent=action==='enter'?'PIN required to lock into Employee Mode':action==='admin'?'Enter Admin PIN':'Enter your 4-digit PIN';
   document.getElementById('pinError').textContent='';
   document.getElementById('pinChangeLink').textContent=action==='exit'?'Change PIN':'';
   updatePinDots();
@@ -424,6 +428,10 @@ function updatePinDots() {
   for(let i=0;i<4;i++) document.getElementById('pd'+i).classList.toggle('filled',i<pinBuffer.length);
 }
 async function checkPin() {
+  if(pinAction==='admin') {
+    if(pinBuffer!=='1079'){pinError('Incorrect PIN');return;}
+    closePinModal(); window.location.href='index.html'; return;
+  }
   if(pinAction==='change') {
     if(changePinStep===1){
       if(pinBuffer!==getPin()){pinError('Wrong current PIN');return;}
@@ -704,7 +712,7 @@ async function renderSummary() {
   const rows=recs2.map(r=>{
     const dur=Math.floor(r.duration_seconds/60)+'m '+Math.floor(r.duration_seconds%60)+'s';
     const ot=Math.max(0,(r.duration_seconds||0)-600);
-    const st=ot>0?'<span class="status-over">+'+Math.floor(ot/60)+'m '+Math.floor(ot%60)+'s over</span>':'<span class="status-ok">✓ On time</span>';
+    const st=(r.duration_seconds!=null&&r.duration_seconds<300)?'<span class="status-review">⚠ Needs review</span>':ot>0?'<span class="status-over">+'+Math.floor(ot/60)+'m '+Math.floor(ot%60)+'s over</span>':'<span class="status-ok">✓ On time</span>';
     const cc=r.category==='Kitchen'?'cat-kitchen':r.category==='Bar'?'cat-bar':'cat-retail';
     const startT=r.start_time?new Date(r.start_time).toLocaleTimeString():'—';
     const endT=r.end_time?new Date(r.end_time).toLocaleTimeString():'Active';
