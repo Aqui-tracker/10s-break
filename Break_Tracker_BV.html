@@ -142,6 +142,14 @@
   .pin-error{color:var(--red);font-size:0.78rem;min-height:18px;margin-bottom:8px;}
   .pin-change-link{font-size:0.72rem;color:var(--muted);cursor:pointer;margin-top:8px;display:inline-block;}
   .pin-change-link:hover{color:var(--accent);}
+  .followup-item{background:var(--card);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:opacity .25s;}
+  .followup-item.addressed{opacity:.38;border-color:var(--border);}
+  .followup-check{width:18px;height:18px;accent-color:var(--green);cursor:pointer;flex-shrink:0;}
+  .followup-name{font-weight:700;font-size:0.88rem;}
+  .followup-dept{margin-top:4px;}
+  .followup-dur{font-size:0.82rem;color:var(--red);font-weight:700;}
+  .followup-over{font-size:0.7rem;color:var(--muted);margin-top:2px;}
+  .fu-day-label{font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:12px 0 6px;}
 </style>
 </head>
 <body>
@@ -395,6 +403,7 @@ let summaryViewWeek = 'current';
 let summarySelectedDay = null;
 let cachedPin = '1234';
 let summaryRenderSeq = 0;
+let currentDayStr = todayStr();
 
 // ── PIN ──────────────────────────────────────────────────
 async function loadPin() {
@@ -502,6 +511,7 @@ async function init() {
   CATEGORIES.forEach(cat=>{
     employees[cat]=(sched[cat]||[]).map((n,i)=>({id:cat+'_'+i+'_'+Date.now(),name:n,added:false,breaks:0}));
   });
+  loadAddedEmployees();
   await loadPin();
   await loadActiveTimers();
   await loadTodayBreakCounts();
@@ -621,6 +631,9 @@ function tick() {
   if(overdues.length){banner.className='alert-banner show';banner.textContent='⚠ OVERDUE: '+overdues.join('  |  ');}
   else banner.className='alert-banner';
 }
+
+function saveAddedEmployees(){try{const s={};CATEGORIES.forEach(c=>{s[c]=employees[c].filter(e=>e.added).map(e=>({name:e.name}));});localStorage.setItem(LOCATION+'_added',JSON.stringify(s));}catch(e){}}
+function loadAddedEmployees(){try{const s=JSON.parse(localStorage.getItem(LOCATION+'_added')||'{}');CATEGORIES.forEach(c=>{if(!s[c])return;s[c].forEach(e=>{if(!employees[c].find(x=>x.name===e.name)){employees[c].push({id:c+'_saved_'+Date.now(),name:e.name,added:true,breaks:0});}});});}catch(e){}}
 function findEmp(empId,cat){ return employees[cat]?.find(e=>e.id===empId); }
 
 // ── Employee management ──────────────────────────────────
@@ -628,6 +641,7 @@ function addEmployee(cat) {
   openModal('Add Employee to '+cat,'',name=>{
     if(!name.trim()) return;
     employees[cat].push({id:cat+'_new_'+Date.now(),name:name.trim(),added:true,breaks:0});
+    saveAddedEmployees();
     renderCategory(cat);
   });
 }
@@ -637,7 +651,7 @@ function editEmployee(empId,cat) {
 }
 function removeEmployee(empId,cat) {
   if(timers[empId]) delete timers[empId];
-  employees[cat]=employees[cat].filter(e=>e.id!==empId); renderCategory(cat);
+  employees[cat]=employees[cat].filter(e=>e.id!==empId); saveAddedEmployees(); renderCategory(cat);
 }
 
 function openModal(title,value,cb) {
@@ -699,6 +713,7 @@ async function renderSummary() {
     btn.onclick=()=>{summarySelectedDay=day;renderSummary();};
     sel.appendChild(btn);
   });
+  const fuAll=Object.values(weekData).flat().filter(r=>(r.duration_seconds||0)>=660);const fuBtn=document.createElement('button');fuBtn.className='day-btn'+(summarySelectedDay==='__followup__'?' active':'')+(fuAll.length?' has-overdue':'');fuBtn.innerHTML='📋 Follow-Up'+(fuAll.length?' ('+fuAll.length+')':'');fuBtn.onclick=()=>{summarySelectedDay='__followup__';renderSummary();};sel.appendChild(fuBtn);if(summarySelectedDay==='__followup__'){const fuAddr=fuAll.filter(r=>localStorage.getItem('fu_'+r.id)==='1').length;document.getElementById('summaryStats').innerHTML='<div class="stat-card"><div class="stat-num" style="color:var(--accent)">'+fuAll.length+'</div><div class="stat-label">Follow-Ups</div></div>'+'<div class="stat-card"><div class="stat-num" style="color:var(--green)">'+fuAddr+'</div><div class="stat-label">Addressed</div></div>'+'<div class="stat-card"><div class="stat-num" style="color:var(--yellow)">'+(fuAll.length-fuAddr)+'</div><div class="stat-label">Pending</div></div>'+'<div class="stat-card"><div class="stat-num" style="color:var(--muted)">—</div><div class="stat-label"></div></div>';const wrapper=document.getElementById('summaryTableWrapper');if(!fuAll.length){wrapper.innerHTML='<div class="no-data-msg">✓ No follow-ups this week.</div>';return;}const byDay={};fuAll.forEach(r=>{let rd=null;DAYS.forEach((d,i)=>{if(dateToStr(addDays(ws,i))===r.date)rd=d;});if(rd){if(!byDay[rd])byDay[rd]=[];byDay[rd].push(r);}});let html='';DAYS.forEach(day=>{if(!byDay[day])return;html+='<div class="fu-day-label">'+day+'</div>';byDay[day].forEach(r=>{const ia=localStorage.getItem('fu_'+r.id)==='1';const dm=Math.floor(r.duration_seconds/60),ds=Math.floor(r.duration_seconds%60);const ov=r.duration_seconds-660;const cc=r.category==='Kitchen'?'cat-kitchen':r.category==='Bar'?'cat-bar':'cat-retail';html+='<div class="followup-item'+(ia?' addressed':'')+'" id="fui-'+r.id+'"><input type="checkbox" class="followup-check"'+(ia?' checked':'')+' onchange="toggleFollowUp(\''+r.id+'\',this.checked)"><div><div class="followup-name">'+r.employee_name+'</div><div class="followup-dept"><span class="cat-pill '+cc+'">'+r.category+'</span></div></div><div style="margin-left:auto;text-align:right"><div class="followup-dur">'+dm+'m '+ds+'s</div><div class="followup-over">+'+Math.floor(ov/60)+'m '+Math.floor(ov%60)+'s over limit</div></div></div>';});});wrapper.innerHTML=html;return;}
   const recs2=weekData[summarySelectedDay]||[];
   const total=recs2.length; const over=recs2.filter(r=>r.duration_seconds>600).length;
   const avg=total?Math.round(recs2.reduce((s,r)=>s+(r.duration_seconds||0),0)/total):0;
@@ -721,6 +736,7 @@ async function renderSummary() {
   wrapper.innerHTML='<table class="summary-table"><thead><tr><th>Employee</th><th>Dept</th><th>Started</th><th>Ended</th><th>Duration</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
 }
 
+function toggleFollowUp(id,checked){try{if(checked)localStorage.setItem('fu_'+id,'1');else localStorage.removeItem('fu_'+id);}catch(e){}const el=document.getElementById('fui-'+id);if(el)el.classList.toggle('addressed',checked);}
 async function deleteBreakRecord(id) {
   await SB.del('breaks?id=eq.'+id);
   renderSummary();
@@ -816,6 +832,7 @@ function playAlarm() {
 document.addEventListener('touchstart',()=>{if(!audioReady) unlockAudio();},{once:true});
 document.addEventListener('click',()=>{if(!audioReady) unlockAudio();},{once:true});
 
+setInterval(async()=>{const nd=todayStr();if(nd!==currentDayStr){currentDayStr=nd;const day=getTodayName();document.getElementById('todayLabel').textContent=day+', '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});const sched=SCHEDULE[day]||{};const ae={};CATEGORIES.forEach(c=>{ae[c]=employees[c].filter(e=>e.added);});timers={};CATEGORIES.forEach(c=>{employees[c]=(sched[c]||[]).map((n,i)=>({id:c+'_'+i+'_'+Date.now(),name:n,added:false,breaks:0}));ae[c].forEach(e=>employees[c].push(e));});await loadActiveTimers();await loadTodayBreakCounts();summarySelectedDay=day;renderAll();if(document.getElementById('tab-Summary').classList.contains('active'))renderSummary();}},60000);
 init();
 </script>
 </body>
