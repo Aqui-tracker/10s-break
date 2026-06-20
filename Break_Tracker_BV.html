@@ -150,6 +150,21 @@
   .followup-dur{font-size:0.82rem;color:var(--red);font-weight:700;}
   .followup-over{font-size:0.7rem;color:var(--muted);margin-top:2px;}
   .fu-day-label{font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:12px 0 6px;}
+  .sched-dept-block{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;}
+  .sched-dept-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .sched-count{font-size:0.72rem;color:var(--muted);}
+  .sched-chips-wrap{min-height:28px;margin-bottom:8px;}
+  .sched-chip{display:inline-flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:0.78rem;margin:2px;}
+  .sched-chip-x{cursor:pointer;color:var(--muted);font-size:0.65rem;}
+  .sched-chip-x:hover{color:var(--red);}
+  .sched-empty{font-size:0.78rem;color:var(--muted);}
+  .sched-add-row{display:flex;gap:8px;margin-top:8px;}
+  .sched-add-input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:0.82rem;outline:none;}
+  .sched-add-input:focus{border-color:var(--accent);}
+  .sched-add-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:0.8rem;font-weight:600;cursor:pointer;}
+  .sched-save-btn{width:100%;background:var(--green);color:#fff;border:none;border-radius:10px;padding:12px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:4px;}
+  .sched-save-btn:disabled{opacity:.5;cursor:not-allowed;}
+  .sched-status{text-align:center;font-size:0.8rem;margin-top:8px;min-height:20px;}
 </style>
 </head>
 <body>
@@ -227,7 +242,7 @@
     <button class="tab-btn active" onclick="switchTab('Kitchen')">🍳 Kitchen</button>
     <button class="tab-btn" onclick="switchTab('Bar')">🍹 Bar</button>
     <button class="tab-btn" onclick="switchTab('Retail')">🛍 Retail</button>
-    <button class="tab-btn" onclick="switchTab('Summary')">📊 Summary</button>
+    <button class="tab-btn" onclick="switchTab('Summary')">📊 Summary</button><button class="tab-btn" onclick="switchTab('Schedule')">📅 Schedule</button>
   </div>
 
   <div id="tab-Kitchen" class="tab-content active">
@@ -266,6 +281,13 @@
     <div class="summary-stats" id="summaryStats"></div>
     <div id="summaryTableWrapper"></div>
   </div>
+
+<div id="tab-Schedule" class="tab-content">
+  <div class="day-selector" id="schedDayRow"></div>
+  <div id="schedDeptPanels"></div>
+  <button class="sched-save-btn" id="schedSaveBtn" onclick="saveScheduleDay()">💾 Save Changes</button>
+  <div class="sched-status" id="schedSaveStatus"></div>
+</div>
 
   <div class="upload-section">
     <div class="upload-title">📂 Upload New Schedules</div>
@@ -404,6 +426,7 @@ let summarySelectedDay = null;
 let cachedPin = '1234';
 let summaryRenderSeq = 0;
 let currentDayStr = todayStr();
+let LIVE_SCHEDULE = {}; let schedSelectedDay = null; let schedEditData = {};
 
 // ── PIN ──────────────────────────────────────────────────
 async function loadPin() {
@@ -515,9 +538,10 @@ function getTodayName() {
 
 // ── Init ─────────────────────────────────────────────────
 async function init() {
+  await loadLiveSchedule();
   const day=getTodayName();
   document.getElementById('todayLabel').textContent=day+', '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  const sched=SCHEDULE[day]||{};
+  const sched=LIVE_SCHEDULE[day]||{};
   CATEGORIES.forEach(cat=>{
     employees[cat]=(sched[cat]||[]).map((n,i)=>({id:cat+'_'+i+'_'+Date.now(),name:n,added:false,breaks:0}));
   });
@@ -681,11 +705,12 @@ document.addEventListener('keydown',e=>{
 
 // ── Tabs ─────────────────────────────────────────────────
 function switchTab(cat) {
-  const names=['Kitchen','Bar','Retail','Summary'];
+  const names=['Kitchen','Bar','Retail','Summary','Schedule'];
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',names[i]===cat));
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+cat).classList.add('active');
   if(cat==='Summary') renderSummary();
+  if(cat==='Schedule'){schedSelectedDay=schedSelectedDay||getTodayName();renderScheduleEditor();}
 }
 
 // ── Summary ──────────────────────────────────────────────
@@ -843,7 +868,7 @@ function playAlarm() {
 document.addEventListener('touchstart',()=>{if(!audioReady) unlockAudio();},{once:true});
 document.addEventListener('click',()=>{if(!audioReady) unlockAudio();},{once:true});
 
-setInterval(async()=>{const nd=todayStr();if(nd!==currentDayStr){currentDayStr=nd;const day=getTodayName();document.getElementById('todayLabel').textContent=day+', '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});const sched=SCHEDULE[day]||{};const ae={};CATEGORIES.forEach(c=>{ae[c]=employees[c].filter(e=>e.added);});timers={};CATEGORIES.forEach(c=>{employees[c]=(sched[c]||[]).map((n,i)=>({id:c+'_'+i+'_'+Date.now(),name:n,added:false,breaks:0}));ae[c].forEach(e=>employees[c].push(e));});await loadActiveTimers();await loadTodayBreakCounts();summarySelectedDay=day;renderAll();if(document.getElementById('tab-Summary').classList.contains('active'))renderSummary();}},60000);
+setInterval(async()=>{const nd=todayStr();if(nd!==currentDayStr){currentDayStr=nd;const day=getTodayName();document.getElementById('todayLabel').textContent=day+', '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});const sched=LIVE_SCHEDULE[day]||{};const ae={};CATEGORIES.forEach(c=>{ae[c]=employees[c].filter(e=>e.added);});timers={};CATEGORIES.forEach(c=>{employees[c]=(sched[c]||[]).map((n,i)=>({id:c+'_'+i+'_'+Date.now(),name:n,added:false,breaks:0}));ae[c].forEach(e=>employees[c].push(e));});await loadActiveTimers();await loadTodayBreakCounts();summarySelectedDay=day;renderAll();if(document.getElementById('tab-Summary').classList.contains('active'))renderSummary();}},60000);
 init();
 </script>
 </body>
