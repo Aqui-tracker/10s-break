@@ -551,7 +551,7 @@ async function init() {
   summarySelectedDay=day;
   renderAll();
   renderSummary();
-  loadLiveSchedule().then(function(){renderAll();if(document.getElementById('tab-Summary').classList.contains('active'))renderSummary();if(document.getElementById('tab-Schedule').classList.contains('active'))renderScheduleEditor();});
+  loadLiveSchedule().then(function(){const _day=getTodayName();const _sched=LIVE_SCHEDULE[_day]||{};CATEGORIES.forEach(function(cat){const newNames=_sched[cat]||[];const scheduled=new Set(newNames);employees[cat]=employees[cat].filter(function(e){return e.added||scheduled.has(e.name)||timers[e.id];});newNames.forEach(function(n,i){if(!employees[cat].find(function(e){return e.name===n;})){employees[cat].push({id:cat+'_live_'+Date.now()+'_'+i,name:n,added:false,breaks:0});}});});renderAll();if(document.getElementById('tab-Summary').classList.contains('active'))renderSummary();if(document.getElementById('tab-Schedule').classList.contains('active'))renderScheduleEditor();});
   setInterval(tick,500);
   setInterval(()=>{document.getElementById('clockDisplay').textContent=new Date().toLocaleTimeString();},1000);
 }
