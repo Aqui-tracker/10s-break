@@ -796,7 +796,7 @@ function handleFileSelect(cat,input) {
 }
 async function applyNewSchedules() {
   const statusEl=document.getElementById('uploadStatus'); statusEl.textContent='Parsing files...';
-  const day=getTodayName(); let changed=false;
+  const day=getTodayName(); let changed=false; const uploadedCats=[];
   const JUNK=new Set(['ee name','total hours =','regular hours =','traning hours =','night sales:','total w/extra hours =','prep','day sales=','max hours=','x','kitchen regular:','kitchen totals:','bar totals:','lunch','dinner','daily totals:','training','paperwork','industrial program']);
   const LOC=new Set(['wg','cpt','cmp','bv','tr']);
   for(const cat of CATEGORIES) {
@@ -837,13 +837,13 @@ async function applyNewSchedules() {
       LIVE_SCHEDULE[day][cat]=_ns;
       if(!schedEditData[day])schedEditData[day]={};
       schedEditData[day][cat]=_ns.slice();
-      renderCategory(cat); changed=true;
+      renderCategory(cat); uploadedCats.push(cat); changed=true;
     }
   }
   if(changed){
     statusEl.textContent='Saving to cloud…';
-    const _ups=CATEGORIES.map(c=>({location:LOCATION,day:day,category:c,names:(LIVE_SCHEDULE[day]||{})[c]||[]}));
-    await SB.del('schedules?location=eq.'+LOCATION+'&day=eq.'+encodeURIComponent(day));
+    const _ups=uploadedCats.map(c=>({location:LOCATION,day:day,category:c,names:(LIVE_SCHEDULE[day]||{})[c]||[]}));
+    for(const _c of uploadedCats){await SB.del('schedules?location=eq.'+LOCATION+'&day=eq.'+encodeURIComponent(day)+'&category=eq.'+encodeURIComponent(_c));}
     const _sr=await fetch(SB_URL+'/rest/v1/schedules',{method:'POST',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify(_ups)});
     statusEl.textContent=_sr.ok?'✓ Schedule saved — iPad will update on refresh!':'✓ Updated locally (cloud save failed: '+_sr.status+')';
     if(document.getElementById('tab-Schedule').classList.contains('active'))renderScheduleEditor();
