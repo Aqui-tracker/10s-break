@@ -426,7 +426,7 @@ let summarySelectedDay = null;
 let cachedPin = '1234';
 let summaryRenderSeq = 0;
 let currentDayStr = todayStr();
-let LIVE_SCHEDULE = {}; let schedSelectedDay = null; let schedEditData = {};
+let LIVE_SCHEDULE=JSON.parse(JSON.stringify(SCHEDULE));let schedSelectedDay=null;let schedEditData=JSON.parse(JSON.stringify(SCHEDULE));
 
 // ── PIN ──────────────────────────────────────────────────
 async function loadPin() {
@@ -538,7 +538,6 @@ function getTodayName() {
 
 // ── Init ─────────────────────────────────────────────────
 async function init() {
-  await loadLiveSchedule();
   const day=getTodayName();
   document.getElementById('todayLabel').textContent=day+', '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   const sched=LIVE_SCHEDULE[day]||{};
@@ -552,6 +551,7 @@ async function init() {
   summarySelectedDay=day;
   renderAll();
   renderSummary();
+  loadLiveSchedule().then(function(){renderAll();if(document.getElementById('tab-Summary').classList.contains('active'))renderSummary();if(document.getElementById('tab-Schedule').classList.contains('active'))renderScheduleEditor();});
   setInterval(tick,500);
   setInterval(()=>{document.getElementById('clockDisplay').textContent=new Date().toLocaleTimeString();},1000);
 }
