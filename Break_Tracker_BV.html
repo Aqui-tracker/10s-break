@@ -490,11 +490,21 @@ function renderEmployeeGrid() {
     grid.appendChild(btn);
   });
 }
-async function toggleEmpBreak(empId,cat) {
-  if(timers[empId]) await stopBreak(empId,cat); else await startBreak(empId,cat);
-  renderEmployeeGrid(); renderCategory(cat);
+let _empBusy=false;
+async function toggleEmpBreak(empId,cat){
+  if(_empBusy)return;
+  _empBusy=true;
+  const _grid=document.getElementById('empNameGrid');
+  if(_grid)_grid.style.pointerEvents='none';
+  try{
+    if(timers[empId])await stopBreak(empId,cat);else await startBreak(empId,cat);
+  }finally{
+    _empBusy=false;
+    if(_grid)_grid.style.pointerEvents='';
+  }
+  renderEmployeeGrid();renderCategory(cat);
 }
-setInterval(()=>{ if(document.getElementById('empModeOverlay').classList.contains('active')) renderEmployeeGrid(); },2000);
+setInterval(()=>{if(!_empBusy&&document.getElementById('empModeOverlay').classList.contains('active'))renderEmployeeGrid();},2000);
 
 // ── Day/Date helpers ─────────────────────────────────────
 function getTodayName() {
@@ -608,6 +618,7 @@ function tick() {
   let overdues=[]; const now=Date.now();
   Object.keys(timers).forEach(empId=>{
     const t=timers[empId]; const elapsed=(now-t.start)/1000;
+    if(elapsed>2400&&!t._stopping){t._stopping=true;const _acat=empId.split('_')[0];stopBreak(empId,_acat);if(document.getElementById('empModeOverlay').classList.contains('active'))renderEmployeeGrid();return;}
     const display=document.getElementById('timer-'+empId);
     const card=document.getElementById('card-'+empId);
     if(!display) return;
