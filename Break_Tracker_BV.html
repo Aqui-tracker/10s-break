@@ -830,13 +830,27 @@ async function applyNewSchedules() {
       } catch(e){console.error(e);}
     }
     if(names.size>0) {
+      const _ns=Array.from(names).sort();
       const added=employees[cat].filter(e=>e.added);
-      employees[cat]=[...Array.from(names).sort().map((n,i)=>({id:cat+'_up_'+i+'_'+Date.now(),name:n,added:false,breaks:0})),...added];
+      employees[cat]=[..._ns.map((n,i)=>({id:cat+'_up_'+i+'_'+Date.now(),name:n,added:false,breaks:0})),...added];
+      if(!LIVE_SCHEDULE[day])LIVE_SCHEDULE[day]={};
+      LIVE_SCHEDULE[day][cat]=_ns;
+      if(!schedEditData[day])schedEditData[day]={};
+      schedEditData[day][cat]=_ns.slice();
       renderCategory(cat); changed=true;
     }
   }
-  statusEl.textContent=changed?'✓ Updated!':'No data found.';
-  setTimeout(()=>{statusEl.textContent='';},4000);
+  if(changed){
+    statusEl.textContent='Saving to cloud…';
+    const _ups=CATEGORIES.map(c=>({location:LOCATION,day:day,category:c,names:(LIVE_SCHEDULE[day]||{})[c]||[]}));
+    await SB.del('schedules?location=eq.'+LOCATION+'&day=eq.'+encodeURIComponent(day));
+    const _sr=await fetch(SB_URL+'/rest/v1/schedules',{method:'POST',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify(_ups)});
+    statusEl.textContent=_sr.ok?'✓ Schedule saved — iPad will update on refresh!':'✓ Updated locally (cloud save failed: '+_sr.status+')';
+    if(document.getElementById('tab-Schedule').classList.contains('active'))renderScheduleEditor();
+  } else {
+    statusEl.textContent='No data found in uploaded files.';
+  }
+  setTimeout(()=>{statusEl.textContent='';},5000);
 }
 
 // ── Audio ─────────────────────────────────────────────────
