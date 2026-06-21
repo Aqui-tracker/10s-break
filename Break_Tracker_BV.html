@@ -798,14 +798,19 @@ async function applyNewSchedules(){
 const statusEl=document.getElementById('uploadStatus');
 statusEl.textContent='Parsing files...';
 const today=getTodayName();
-let changed=false;
-const uploadedCats=[];
-const allSchedule={};
+let changed=false;const uploadedCats=[];const allSchedule={};
 const JUNK=new Set(['ee name','total hours =','regular hours =','traning hours =','night sales:','total w/extra hours =','prep','day sales=','max hours=','x','kitchen regular:','kitchen totals:','bar totals:','lunch','dinner','daily totals:','training','paperwork','industrial program']);
 const LOC=new Set(['wg','cpt','cmp','bv','tr']);
+const DAY_ABBR={'wed':'Wednesday','thu':'Thursday','fri':'Friday','sat':'Saturday','sun':'Sunday','mon':'Monday','tue':'Tuesday'};
+function matchDay(cell){
+  if(typeof cell!=='string')return null;
+  const s=cell.trim();const sl=s.toLowerCase();
+  const full=DAYS.find(d=>d.toLowerCase()===sl);if(full)return full;
+  return DAY_ABBR[sl.slice(0,3)]||null;
+}
 for(const cat of CATEGORIES){
   if(!pendingFiles[cat]||!pendingFiles[cat].length)continue;
-  const dayNames={};
+  const allDayNames={};
   for(const file of pendingFiles[cat]){
     try{
       const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array'});
@@ -813,15 +818,15 @@ for(const cat of CATEGORIES){
         const ws=wb.Sheets[sn];const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
         const dayColumns={};
         for(let r=0;r<Math.min(8,data.length);r++){
-          for(let c2=0;c2<(data[r]||[]).length;c2++){
-            const cell=data[r][c2];
-            if(typeof cell==='string'){const d=DAYS.find(x=>x===cell.trim());if(d&&!dayColumns[d])dayColumns[d]={dc:c2,dr:r};}
+          for(let ci=0;ci<(data[r]||[]).length;ci++){
+            const d=matchDay(data[r][ci]);
+            if(d&&!dayColumns[d])dayColumns[d]={dc:ci,dr:r};
           }
         }
         for(const [dayName,{dc,dr}] of Object.entries(dayColumns)){
-          if(!dayNames[dayName])dayNames[dayName]=new Set();
+          if(!allDayNames[dayName])allDayNames[dayName]=new Set();
           let isCompact=true;
-          if(dc+5<(data[dr]||[]).length){const nx=data[dr][dc+5];isCompact=!(typeof nx==='string'&&DAYS.includes(nx.trim()));}
+          if(dc+5<(data[dr]||[]).length){const nx=data[dr][dc+5];isCompact=!(matchDay(nx)!==null);}
           for(let r=dr+2;r<data.length;r++){
             const row=data[r]||[];const cell=row[dc];
             if(!cell||typeof cell!=='string')continue;
@@ -830,29 +835,26 @@ for(const cat of CATEGORIES){
             if(n.toLowerCase().includes('training')||n.toLowerCase().includes('hours'))continue;
             const parts=n.split(' ');if(parts.length>1&&LOC.has(parts[parts.length-1].toLowerCase()))continue;
             if(!isCompact){const hv=v=>v!==null&&v!==undefined&&v!==''&&v!==' ';if(!hv(row[dc+2])&&!hv(row[dc+3]))continue;}
-            dayNames[dayName].add(n);
+            allDayNames[dayName].add(n);
           }
         }
         break;
       }
-    }catch(e){console.error(e);}
+    }catch(e){console.error('Upload error:',e);}
   }
-  if(Object.keys(dayNames).length>0){
+  if(Object.keys(allDayNames).length>0){
     allSchedule[cat]={};
-    for(const [dayName,names] of Object.entries(dayNames)){allSchedule[cat][dayName]=Array.from(names).sort();}
-    const todayNames=allSchedule[cat][today]||[];
-    if(todayNames.length>0){
-      const added=employees[cat].filter(e=>e.added);
-      employees[cat]=[...todayNames.map((n,i)=>({id:cat+'_up_'+i+'_'+Date.now(),name:n,added:false,breaks:0})),...added];
-      renderCategory(cat);
-    }
+    for(const [d,ns] of Object.entries(allDayNames)){allSchedule[cat][d]=Array.from(ns).sort();}
     DAYS.forEach(function(d){
       if(!LIVE_SCHEDULE[d])LIVE_SCHEDULE[d]={};
-      LIVE_SCHEDULE[d][cat]=(allSchedule[cat][d]||[]);
+      LIVE_SCHEDULE[d][cat]=allSchedule[cat][d]||[];
       if(!schedEditData[d])schedEditData[d]={};
       schedEditData[d][cat]=(allSchedule[cat][d]||[]).slice();
     });
-    uploadedCats.push(cat);changed=true;
+    const todayNames=allSchedule[cat][today]||[];
+    const added=employees[cat].filter(e=>e.added);
+    employees[cat]=[...todayNames.map((n,i)=>({id:cat+'_up_'+i+'_'+Date.now(),name:n,added:false,breaks:0})),...added];
+    renderCategory(cat);uploadedCats.push(cat);changed=true;
   }
 }
 if(changed){
@@ -864,9 +866,9 @@ if(changed){
   statusEl.textContent=_sr.ok?'✓ Full week saved — iPad updates on refresh!':'✓ Updated locally (cloud save failed: '+_sr.status+')';
   if(document.getElementById('tab-Schedule').classList.contains('active'))renderScheduleEditor();
 }else{
-  statusEl.textContent='No schedule data found in uploaded files.';
+  statusEl.textContent='No schedule data found. Check that day names appear in the first 8 rows of your Excel files.';
 }
-setTimeout(()=>{statusEl.textContent='';},5000);}
+setTimeout(()=>{statusEl.textContent='';},6000);}
 
 // ── Audio ─────────────────────────────────────────────────
 let audioCtx=null; let audioReady=false;
