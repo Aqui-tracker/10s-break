@@ -212,7 +212,7 @@ const statusEl=document.getElementById('uploadStatus');
 statusEl.textContent='Parsing files...';
 const today=getTodayName();
 let changed=false;const uploadedCats=[];const allSchedule={};
-const JUNK=new Set(['ee name','total hours =','regular hours =','traning hours =','night sales:','total w/extra hours =','prep','day sales=','max hours=','x','kitchen regular:','kitchen totals:','bar totals:','lunch','dinner','daily totals:','training','paperwork','industrial program','work schedule','rest period','break','lunch break','1st rest break','2nd rest break','rest break','select','break time','employee','position','role','title','off','day off','pto','sick','vacation','none','n/a','tbd','tba','open','close','shift','schedule','time','date','dept','department','name','total','regular','extra','overtime','clock in','clock out','1st','2nd','3rd','rest','meal','period','meal period','ee listing','ee','amount','salary','wage','mgr','manager','busser','bartender','server','host','cashier','dishwasher','janitor','runner','support','regular hours','overtime hours']);
+const JUNK=new Set(['ee name','total hours =','regular hours =','traning hours =','night sales:','night sales=','day sales:','total w/extra hours =','prep','day sales=','max hours=','x','kitchen regular:','kitchen totals:','bar totals:','lunch','dinner','daily totals:','training','paperwork','industrial program','work schedule','rest period','break','lunch break','1st rest break','2nd rest break','rest break','select','break time','employee','position','role','title','off','day off','pto','sick','vacation','none','n/a','tbd','tba','open','close','shift','schedule','time','date','dept','department','name','total','regular','extra','overtime','clock in','clock out','1st','2nd','3rd','rest','meal','period','meal period','ee listing','ee','amount','salary','wage','mgr','manager','busser','bartender','server','host','cashier','dishwasher','janitor','runner','support','regular hours','overtime hours']);
 const LOC=new Set(['wg','cpt','cmp','bv','tr']);
 const DAY_MAP={'wed':'Wednesday','thu':'Thursday','fri':'Friday','sat':'Saturday','sun':'Sunday','mon':'Monday','tue':'Tuesday'};
 function matchDay(v){
@@ -228,8 +228,12 @@ function isValidName(v){
   if(s.startsWith('#'))return false;
   if(s==='0')return false;
   if(/^\d{1,2}:\d{2}/.test(s))return false;
+  if(s.includes('='))return false;
+  if(s.includes(':')&&!s.includes(' '))return false;
   if(JUNK.has(s.toLowerCase()))return false;
   if(s.toLowerCase().includes('hours'))return false;
+  if(s.toLowerCase().includes('sales'))return false;
+  if(s.toLowerCase().includes('total'))return false;
   const parts=s.split(' ');
   if(parts.length>1&&LOC.has(parts[parts.length-1].toLowerCase()))return false;
   return true;
