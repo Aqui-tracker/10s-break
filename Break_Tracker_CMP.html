@@ -274,7 +274,7 @@ for(const cat of CATEGORIES){
       }
     }catch(e){console.error('Upload parse error:',e);}
     if(DAYS.every(d=>allDayNames[d]&&allDayNames[d].size>0))break;
-  }.length&&Object.values(allDayNames).some(s=>s.size>0)){
+  }if(Object.keys(allDayNames).length&&Object.values(allDayNames).some(s=>s.size>0)){
     allSchedule[cat]={};
     for(const [d,ns] of Object.entries(allDayNames)){allSchedule[cat][d]=Array.from(ns).sort();}
     DAYS.forEach(function(d){
