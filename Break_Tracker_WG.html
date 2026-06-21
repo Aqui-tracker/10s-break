@@ -259,6 +259,7 @@ for(const cat of CATEGORIES){
         const snl=sn.toLowerCase().trim();
         const isSchedPrint=snl==='schedule-print'||snl==='schedule print';
         const isWorksheet=snl==='worksheet'||snl.startsWith('worksheet');
+        const isMainWorksheet=snl==='worksheet';
         if(!isSchedPrint&&!isWorksheet)continue;
         const ws=wb.Sheets[sn];const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
         const dayColumns={};
@@ -281,6 +282,7 @@ for(const cat of CATEGORIES){
               const roleCell=String(row[0]||'').toLowerCase().trim();
               const isTraining=roleCell.startsWith('training')||roleCell.startsWith('trainee');
               if(hasSchedPrint&&!isTraining)continue;
+              if(hasSchedPrint&&isTraining&&!isMainWorksheet)continue;
               if(!isTraining){const hv=v=>v!=null&&String(v).trim()!==''&&String(v).trim()!==' '&&String(v).trim()!=='0:00:00'&&String(v).trim()!=='00:00:00'&&!String(v).trim().startsWith('#')&&String(v).trim()!=='0';if(!hv(row[dc+1])&&!hv(row[dc+2])&&!hv(row[dc+3]))continue;}
               {let _n=cell.trim();const _p=_n.split(' ');if(_p.length>1&&LOC.has(_p[_p.length-1].toLowerCase()))_n=_p.slice(0,-1).join(' ');allDayNames[dayName].add(_n);}
             }
