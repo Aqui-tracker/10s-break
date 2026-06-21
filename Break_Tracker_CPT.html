@@ -212,7 +212,7 @@ const statusEl=document.getElementById('uploadStatus');
 statusEl.textContent='Parsing files...';
 const today=getTodayName();
 let changed=false;const uploadedCats=[];const allSchedule={};
-const JUNK=new Set(['ee name','total hours =','regular hours =','traning hours =','night sales:','total w/extra hours =','prep','day sales=','max hours=','x','kitchen regular:','kitchen totals:','bar totals:','lunch','dinner','daily totals:','training','paperwork','industrial program','work schedule','rest period','break','lunch break','1st rest break','2nd rest break']);
+const JUNK=new Set(['ee name','total hours =','regular hours =','traning hours =','night sales:','total w/extra hours =','prep','day sales=','max hours=','x','kitchen regular:','kitchen totals:','bar totals:','lunch','dinner','daily totals:','training','paperwork','industrial program','work schedule','rest period','break','lunch break','1st rest break','2nd rest break','rest break','select','break time','employee','position','role','title','off','day off','pto','sick','vacation','none','n/a','tbd','tba','open','close','shift','schedule','time','date','dept','department','name','total','regular','extra','overtime','clock in','clock out','1st','2nd','3rd','rest','meal','period','meal period','ee listing','ee','amount','salary','wage','mgr','manager','busser','bartender','server','host','cashier','dishwasher','janitor','runner','support','regular hours','overtime hours']);
 const LOC=new Set(['wg','cpt','cmp','bv','tr']);
 const DAY_MAP={'wed':'Wednesday','thu':'Thursday','fri':'Friday','sat':'Saturday','sun':'Sunday','mon':'Monday','tue':'Tuesday'};
 function matchDay(v){
@@ -265,8 +265,8 @@ for(const cat of CATEGORIES){
         }
       }
     }catch(e){console.error('Upload parse error:',e);}
-  }
-  if(Object.keys(allDayNames).length&&Object.values(allDayNames).some(s=>s.size>0)){
+    if(DAYS.every(d=>allDayNames[d]&&allDayNames[d].size>0))break;
+  }.length&&Object.values(allDayNames).some(s=>s.size>0)){
     allSchedule[cat]={};
     for(const [d,ns] of Object.entries(allDayNames)){allSchedule[cat][d]=Array.from(ns).sort();}
     DAYS.forEach(function(d){
