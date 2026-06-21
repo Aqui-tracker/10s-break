@@ -224,7 +224,7 @@ function matchDay(v){
 function isValidName(v){
   if(!v||typeof v!=='string')return false;
   const s=v.trim();
-  if(s.length<2)return false;
+  if(s.length<1)return false;
   if(s.startsWith('#'))return false;
   if(s==='0')return false;
   if(/^\d{1,2}:\d{2}/.test(s))return false;
@@ -256,8 +256,9 @@ for(const cat of CATEGORIES){
       for(const sn of wb.SheetNames){
         const snl=sn.toLowerCase().trim();
         const isSchedPrint=snl==='schedule-print'||snl==='schedule print';
-        const isWorksheet=snl==='worksheet';
+        const isWorksheet=snl==='worksheet'||snl.startsWith('worksheet');
         if(!isSchedPrint&&!isWorksheet)continue;
+        const requireTime=snl!=='worksheet'&&!isSchedPrint;
         const ws=wb.Sheets[sn];const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
         const dayColumns={};
         for(let r=0;r<Math.min(8,data.length);r++){
@@ -275,7 +276,9 @@ for(const cat of CATEGORIES){
               if(isValidName(nameCell)&&isValidTime(timeCell))allDayNames[dayName].add(nameCell.trim());
             }else{
               const cell=row[dc];
-              if(isValidName(cell))allDayNames[dayName].add(cell.trim());
+              if(!isValidName(cell))continue;
+              if(requireTime){const hv=v=>v!=null&&String(v).trim()!==''&&String(v).trim()!==' '&&String(v).trim()!=='0:00:00'&&String(v).trim()!=='00:00:00';if(!hv(row[dc+1])&&!hv(row[dc+2])&&!hv(row[dc+3]))continue;}
+              allDayNames[dayName].add(cell.trim());
             }
           }
         }
