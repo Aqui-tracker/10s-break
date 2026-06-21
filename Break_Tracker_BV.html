@@ -820,8 +820,6 @@ function isValidName(v){
   if(s.toLowerCase().includes('hours'))return false;
   if(s.toLowerCase().includes('sales'))return false;
   if(s.toLowerCase().includes('total'))return false;
-  const parts=s.split(' ');
-  if(parts.length>1&&LOC.has(parts[parts.length-1].toLowerCase()))return false;
   return true;
 }
 function isValidTime(v){
@@ -860,12 +858,12 @@ for(const cat of CATEGORIES){
             const row=data[r]||[];
             if(isSchedPrint){
               const nameCell=row[0];const timeCell=row[dc];
-              if(isValidName(nameCell)&&isValidTime(timeCell))allDayNames[dayName].add(nameCell.trim());
+              if(isValidName(nameCell)&&isValidTime(timeCell)){let _n=nameCell.trim();const _p=_n.split(' ');if(_p.length>1&&LOC.has(_p[_p.length-1].toLowerCase()))_n=_p.slice(0,-1).join(' ');allDayNames[dayName].add(_n);}
             }else{
               const cell=row[dc];
               if(!isValidName(cell))continue;
-              if(requireTime){const roleCell=String(row[0]||'').toLowerCase().trim();const isTraining=roleCell.startsWith('training')||roleCell.startsWith('trainee');if(!isTraining){const hv=v=>v!=null&&String(v).trim()!==''&&String(v).trim()!==' '&&String(v).trim()!=='0:00:00'&&String(v).trim()!=='00:00:00';if(!hv(row[dc+1])&&!hv(row[dc+2])&&!hv(row[dc+3]))continue;}}
-              allDayNames[dayName].add(cell.trim());
+              if(requireTime){const roleCell=String(row[0]||'').toLowerCase().trim();const isTraining=roleCell.startsWith('training')||roleCell.startsWith('trainee');if(!isTraining){const hv=v=>v!=null&&String(v).trim()!==''&&String(v).trim()!==' '&&String(v).trim()!=='0:00:00'&&String(v).trim()!=='00:00:00'&&!String(v).trim().startsWith('#');if(!hv(row[dc+1])&&!hv(row[dc+2])&&!hv(row[dc+3]))continue;}}
+              {let _n=cell.trim();const _p=_n.split(' ');if(_p.length>1&&LOC.has(_p[_p.length-1].toLowerCase()))_n=_p.slice(0,-1).join(' ');allDayNames[dayName].add(_n);}
             }
           }
         }
