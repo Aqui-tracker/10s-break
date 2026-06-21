@@ -838,12 +838,12 @@ for(const cat of CATEGORIES){
   for(const file of pendingFiles[cat]){
     try{
       const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array'});
+      const hasSchedPrint=wb.SheetNames.some(sn=>{const snl=sn.toLowerCase().trim();return snl==='schedule-print'||snl==='schedule print';});
       for(const sn of wb.SheetNames){
         const snl=sn.toLowerCase().trim();
         const isSchedPrint=snl==='schedule-print'||snl==='schedule print';
         const isWorksheet=snl==='worksheet'||snl.startsWith('worksheet');
         if(!isSchedPrint&&!isWorksheet)continue;
-        const requireTime=!isSchedPrint;
         const ws=wb.Sheets[sn];const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
         const dayColumns={};
         for(let r=0;r<Math.min(8,data.length);r++){
@@ -862,7 +862,10 @@ for(const cat of CATEGORIES){
             }else{
               const cell=row[dc];
               if(!isValidName(cell))continue;
-              if(requireTime){const roleCell=String(row[0]||'').toLowerCase().trim();const isTraining=roleCell.startsWith('training')||roleCell.startsWith('trainee');if(!isTraining){const hv=v=>v!=null&&String(v).trim()!==''&&String(v).trim()!==' '&&String(v).trim()!=='0:00:00'&&String(v).trim()!=='00:00:00'&&!String(v).trim().startsWith('#');if(!hv(row[dc+1])&&!hv(row[dc+2])&&!hv(row[dc+3]))continue;}}
+              const roleCell=String(row[0]||'').toLowerCase().trim();
+              const isTraining=roleCell.startsWith('training')||roleCell.startsWith('trainee');
+              if(hasSchedPrint&&!isTraining)continue;
+              if(!isTraining){const hv=v=>v!=null&&String(v).trim()!==''&&String(v).trim()!==' '&&String(v).trim()!=='0:00:00'&&String(v).trim()!=='00:00:00'&&!String(v).trim().startsWith('#')&&String(v).trim()!=='0';if(!hv(row[dc+1])&&!hv(row[dc+2])&&!hv(row[dc+3]))continue;}
               {let _n=cell.trim();const _p=_n.split(' ');if(_p.length>1&&LOC.has(_p[_p.length-1].toLowerCase()))_n=_p.slice(0,-1).join(' ');allDayNames[dayName].add(_n);}
             }
           }
