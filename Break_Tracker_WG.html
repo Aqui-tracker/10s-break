@@ -215,14 +215,27 @@ const statusEl=document.getElementById('uploadStatus');
 statusEl.textContent='Parsing files...';
 const today=getTodayName();
 let changed=false;const uploadedCats=[];const allSchedule={};
-const JUNK=new Set(['ee name','total hours =','regular hours =','traning hours =','night sales:','total w/extra hours =','prep','day sales=','max hours=','x','kitchen regular:','kitchen totals:','bar totals:','lunch','dinner','daily totals:','training','paperwork','industrial program']);
+const JUNK=new Set(['ee name','total hours =','regular hours =','traning hours =','night sales:','total w/extra hours =','prep','day sales=','max hours=','x','kitchen regular:','kitchen totals:','bar totals:','lunch','dinner','daily totals:','training','paperwork','industrial program','work schedule','rest period','break','lunch break','1st rest break','2nd rest break']);
 const LOC=new Set(['wg','cpt','cmp','bv','tr']);
-const DAY_ABBR={'wed':'Wednesday','thu':'Thursday','fri':'Friday','sat':'Saturday','sun':'Sunday','mon':'Monday','tue':'Tuesday'};
-function matchDay(cell){
-  if(typeof cell!=='string')return null;
-  const s=cell.trim();const sl=s.toLowerCase();
-  const full=DAYS.find(d=>d.toLowerCase()===sl);if(full)return full;
-  return DAY_ABBR[sl.slice(0,3)]||null;
+const DAY_MAP={'wed':'Wednesday','thu':'Thursday','fri':'Friday','sat':'Saturday','sun':'Sunday','mon':'Monday','tue':'Tuesday'};
+function matchDay(v){
+  if(!v||typeof v!=='string')return null;
+  const s=v.trim().toLowerCase();
+  const full=DAYS.find(d=>d.toLowerCase()===s);if(full)return full;
+  return DAY_MAP[s.slice(0,3)]||null;
+}
+function isValidName(v){
+  if(!v||typeof v!=='string')return false;
+  const s=v.trim();
+  if(s.length<2)return false;
+  if(s.startsWith('#'))return false;
+  if(s==='0')return false;
+  if(/^\d{1,2}:\d{2}/.test(s))return false;
+  if(JUNK.has(s.toLowerCase()))return false;
+  if(s.toLowerCase().includes('hours'))return false;
+  const parts=s.split(' ');
+  if(parts.length>1&&LOC.has(parts[parts.length-1].toLowerCase()))return false;
+  return true;
 }
 for(const cat of CATEGORIES){
   if(!pendingFiles[cat]||!pendingFiles[cat].length)continue;
@@ -235,30 +248,28 @@ for(const cat of CATEGORIES){
         const dayColumns={};
         for(let r=0;r<Math.min(8,data.length);r++){
           for(let ci=0;ci<(data[r]||[]).length;ci++){
-            const d=matchDay(data[r][ci]);
-            if(d&&!dayColumns[d])dayColumns[d]={dc:ci,dr:r};
+            const d=matchDay(data[r][ci]);if(d&&!dayColumns[d])dayColumns[d]={dc:ci,dr:r};
           }
         }
+        if(!Object.keys(dayColumns).length)continue;
         for(const [dayName,{dc,dr}] of Object.entries(dayColumns)){
           if(!allDayNames[dayName])allDayNames[dayName]=new Set();
           let isCompact=true;
-          if(dc+5<(data[dr]||[]).length){const nx=data[dr][dc+5];isCompact=!(matchDay(nx)!==null);}
+          if(dc+5<(data[dr]||[]).length){isCompact=!matchDay(data[dr][dc+5]);}
           for(let r=dr+2;r<data.length;r++){
             const row=data[r]||[];const cell=row[dc];
-            if(!cell||typeof cell!=='string')continue;
-            const n=cell.trim();if(!n||n.length<2)continue;
-            if(JUNK.has(n.toLowerCase()))continue;
-            if(n.toLowerCase().includes('training')||n.toLowerCase().includes('hours'))continue;
-            const parts=n.split(' ');if(parts.length>1&&LOC.has(parts[parts.length-1].toLowerCase()))continue;
-            if(!isCompact){const hv=v=>v!==null&&v!==undefined&&v!==''&&v!==' ';if(!hv(row[dc+2])&&!hv(row[dc+3]))continue;}
-            allDayNames[dayName].add(n);
+            if(!isValidName(cell))continue;
+            if(!isCompact){
+              const hv=v=>v!==null&&v!==undefined&&v!==''&&v!==' ';
+              if(!hv(row[dc+2])&&!hv(row[dc+3]))continue;
+            }
+            allDayNames[dayName].add(cell.trim());
           }
         }
-        break;
       }
-    }catch(e){console.error('Upload error:',e);}
+    }catch(e){console.error('Upload parse error:',e);}
   }
-  if(Object.keys(allDayNames).length>0){
+  if(Object.keys(allDayNames).length&&Object.values(allDayNames).some(s=>s.size>0)){
     allSchedule[cat]={};
     for(const [d,ns] of Object.entries(allDayNames)){allSchedule[cat][d]=Array.from(ns).sort();}
     DAYS.forEach(function(d){
@@ -282,7 +293,7 @@ if(changed){
   statusEl.textContent=_sr.ok?'✓ Full week saved — iPad updates on refresh!':'✓ Updated locally (cloud save failed: '+_sr.status+')';
   if(document.getElementById('tab-Schedule').classList.contains('active'))renderScheduleEditor();
 }else{
-  statusEl.textContent='No schedule data found. Check that day names appear in the first 8 rows of your Excel files.';
+  statusEl.textContent='No schedule data found in uploaded files.';
 }
 setTimeout(()=>{statusEl.textContent='';},6000);}
 let audioCtx=null,audioReady=false;
