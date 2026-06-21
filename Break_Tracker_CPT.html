@@ -241,6 +241,7 @@ for(const cat of CATEGORIES){
     try{
       const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array'});
       for(const sn of wb.SheetNames){
+        if(!sn.toLowerCase().startsWith('worksheet'))continue;
         const ws=wb.Sheets[sn];const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
         const dayColumns={};
         for(let r=0;r<Math.min(8,data.length);r++){
