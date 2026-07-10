@@ -668,7 +668,7 @@ function tick() {
 }
 
 function saveAddedEmployees(){try{const s={date:todayStr()};CATEGORIES.forEach(c=>{s[c]=employees[c].filter(e=>e.added).map(e=>({name:e.name}));});localStorage.setItem(LOCATION+'_added',JSON.stringify(s));}catch(e){}}
-function loadAddedEmployees(){try{const s=JSON.parse(localStorage.getItem(LOCATION+'_added')||'{}');if(!s.date||s.date!==todayStr()){localStorage.removeItem(LOCATION+'_added');return;}CATEGORIES.forEach(c=>{if(!s[c])return;s[c].forEach(e=>{if(!employees[c].find(x=>x.name===e.name)){employees[c].push({id:c+'_saved_'+Date.now(),name:e.name,added:true,breaks:0});}});});}catch(e){}}
+function loadAddedEmployees(){try{const s=JSON.parse(localStorage.getItem(LOCATION+'_added')||'{}');if(!s.date||s.date!==todayStr()){localStorage.removeItem(LOCATION+'_added');return;}CATEGORIES.forEach(c=>{if(!s[c])return;s[c].forEach((e,_si)=>{if(!employees[c].find(x=>x.name===e.name)){employees[c].push({id:c+'_saved_'+Date.now()+'_'+_si,name:e.name,added:true,breaks:0});}});});}catch(e){}}
 function findEmp(empId,cat){ return employees[cat]?.find(e=>e.id===empId); }
 
 // ── Employee management ──────────────────────────────────
